@@ -1,0 +1,42 @@
+[package]
+name = "flowstats"
+version = "0.1.0"
+edition = "2021"
+authors = ["Vahid Negahdari <vahid.negahdari@gmail.com>"]
+description = "Stream analytics algorithms: cardinality, quantiles, frequency, sampling, and more"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/vnvo/flowstats"
+documentation = "https://docs.rs/flowstats"
+readme = "README.md"
+keywords = ["streaming", "algorithms", "hyperloglog", "tdigest", "sketch", "analytics"]
+categories = ["algorithms", "data-structures", "science"]
+
+[features]
+default = ["std", "cardinality"]
+
+# All algorithms
+full = ["cardinality"]
+
+cardinality = []   # HyperLogLog, HLL++, CPC, linear counting
+
+# Platform features
+std = []
+simd = []
+serde = ["dep:serde"]
+
+[dependencies]
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+serde = { version = "1.0", features = ["derive"], optional = true }
+
+[dev-dependencies]
+criterion = "0.5"
+rand = "0.9"
+rand_distr = "0.4"
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
