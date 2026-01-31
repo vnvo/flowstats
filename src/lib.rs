@@ -82,6 +82,10 @@ pub mod cardinality;
 #[cfg_attr(docsrs, doc(cfg(feature = "quantiles")))]
 pub mod quantiles;
 
+#[cfg(feature = "frequency")]
+#[cfg_attr(docsrs, doc(cfg(feature = "frequency")))]
+pub mod frequency;
+
 pub mod prelude {
     pub use crate::traits::*;
 
@@ -90,6 +94,9 @@ pub mod prelude {
 
     #[cfg(feature = "quantiles")]
     pub use crate::quantiles::TDigest;
+
+    #[cfg(feature = "frequency")]
+    pub use crate::frequency::CountMinSketch;    
 }
 
 #[cfg(feature = "cardinality")]
@@ -97,3 +104,6 @@ pub use cardinality::HyperLogLog;
 
 #[cfg(feature = "quantiles")]
 pub use quantiles::TDigest;
+
+#[cfg(feature = "frequency")]
+pub use frequency::CountMinSketch;

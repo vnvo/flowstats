@@ -12,14 +12,14 @@ keywords = ["streaming", "algorithms", "hyperloglog", "tdigest", "sketch", "anal
 categories = ["algorithms", "data-structures", "science"]
 
 [features]
-default = ["std", "cardinality"]
+default = ["std", "cardinality", "quantiles", "frequency"]
 
 # All algorithms
-full = ["cardinality", "quantiles"]
+full = ["cardinality", "quantiles", "frequency"]
 
 cardinality = []   # HyperLogLog, HLL++, CPC, linear counting
 quantiles = []     # t-digest, KLL, DDSketch
-
+frequency = []     # Count-Min Sketch
 
 # Platform features
 std = []
