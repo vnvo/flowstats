@@ -26,6 +26,13 @@
 //! }
 //! println!("Distinct users: ~{}", hll.estimate());
 //!
+//! // Track request latencies
+//! let mut digest = TDigest::new(100.0);
+//! for latency in [12.5, 45.2, 23.1, 67.8, 15.3] {
+//!     digest.add(latency);
+//! }
+//! println!("p99 latency: {:?}", digest.quantile(0.99));
+//!  
 //! ```
 //!
 //! ## Distributed Computing
@@ -63,7 +70,6 @@
 //! Platform features:
 //! - `std` (default): Standard library support
 //! - `serde`: Enable serialization
-//! - `simd`: SIMD acceleration
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(docsrs, feature(doc_cfg))]

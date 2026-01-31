@@ -23,7 +23,6 @@ frequency = []     # Count-Min Sketch
 
 # Platform features
 std = []
-simd = []
 serde = ["dep:serde"]
 
 [dependencies]
