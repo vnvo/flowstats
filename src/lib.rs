@@ -53,7 +53,7 @@
 //! Algorithm families (pick what you need):
 //! - `cardinality` (default): HyperLogLog for distinct counting
 //! - `frequency` (default): Count-Min Sketch, Space-Saving (tbd)
-//! - `quantiles` (default): t-digest for percentiles (tbd)
+//! - `quantiles` (default): t-digest for percentiles
 //! - `membership`: Bloom and Cuckoo filters (tbd)
 //! - `sampling`: Reservoir and weighted sampling (tbd)
 //! - `sets`: Theta sketch for set operations (tbd)
@@ -74,20 +74,26 @@ extern crate alloc;
 // Core traits always available
 pub mod traits;
 
-// Algorithm families behind feature flags
 #[cfg(feature = "cardinality")]
 #[cfg_attr(docsrs, doc(cfg(feature = "cardinality")))]
 pub mod cardinality;
 
+#[cfg(feature = "quantiles")]
+#[cfg_attr(docsrs, doc(cfg(feature = "quantiles")))]
+pub mod quantiles;
 
-/// Prelude for convenient imports
 pub mod prelude {
     pub use crate::traits::*;
 
     #[cfg(feature = "cardinality")]
     pub use crate::cardinality::HyperLogLog;
+
+    #[cfg(feature = "quantiles")]
+    pub use crate::quantiles::TDigest;
 }
 
-// Re-export main types at crate root
 #[cfg(feature = "cardinality")]
 pub use cardinality::HyperLogLog;
+
+#[cfg(feature = "quantiles")]
+pub use quantiles::TDigest;

@@ -15,9 +15,11 @@ categories = ["algorithms", "data-structures", "science"]
 default = ["std", "cardinality"]
 
 # All algorithms
-full = ["cardinality"]
+full = ["cardinality", "quantiles"]
 
 cardinality = []   # HyperLogLog, HLL++, CPC, linear counting
+quantiles = []     # t-digest, KLL, DDSketch
+
 
 # Platform features
 std = []
