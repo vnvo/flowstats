@@ -24,5 +24,7 @@
 //! ```
 
 mod count_min;
+mod space_saving;
 
 pub use count_min::CountMinSketch;
+pub use space_saving::SpaceSaving;

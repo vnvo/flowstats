@@ -109,7 +109,7 @@ impl ErrorBounds {
 }
 
 /// Core trait for all streaming sketches
-pub trait Sketch: Clone + Send + Sync + Debug {
+pub trait Sketch: Clone + Debug {
     /// The type of item this sketch processes
     type Item: ?Sized;
 
