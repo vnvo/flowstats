@@ -44,7 +44,10 @@ libm = "0.2"
 [dev-dependencies]
 criterion = "0.5"
 rand = "0.9"
-rand_distr = "0.4"
+
+[[bench]]
+name = "benchmarks"
+harness = false
 
 [profile.release]
 lto = true

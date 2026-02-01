@@ -5,28 +5,29 @@
 
 use core::fmt::Debug;
 
+/// Error during sketch merge operation
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MergeError {
-    IncompatibleConfig { expected: String, found: String },
-    VersionMismatch { expected: u32, found: u32 },
+    /// Sketches have incompatible configurations
+    IncompatibleConfig {
+        expected: String,
+        found: String,
+    },
+    /// Sketches have incompatible versions
+    VersionMismatch {
+        expected: u32,
+        found: u32,
+    },
 }
 
 impl core::fmt::Display for MergeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             MergeError::IncompatibleConfig { expected, found } => {
-                write!(
-                    f,
-                    "incompatible config: expected {}, found {}",
-                    expected, found
-                )
+                write!(f, "incompatible config: expected {}, found {}", expected, found)
             }
             MergeError::VersionMismatch { expected, found } => {
-                write!(
-                    f,
-                    "version mismatch: expected {}, found {}",
-                    expected, found
-                )
+                write!(f, "version mismatch: expected {}, found {}", expected, found)
             }
         }
     }
@@ -38,9 +39,13 @@ impl std::error::Error for MergeError {}
 /// Error during sketch decoding
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodeError {
+    /// Input buffer too short
     BufferTooShort { expected: usize, found: usize },
+    /// Invalid magic number or header
     InvalidHeader,
+    /// Unsupported version
     UnsupportedVersion(u32),
+    /// Corrupted data
     Corrupted(String),
 }
 
@@ -48,11 +53,7 @@ impl core::fmt::Display for DecodeError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             DecodeError::BufferTooShort { expected, found } => {
-                write!(
-                    f,
-                    "buffer too short: expected {}, found {}",
-                    expected, found
-                )
+                write!(f, "buffer too short: expected {}, found {}", expected, found)
             }
             DecodeError::InvalidHeader => write!(f, "invalid header"),
             DecodeError::UnsupportedVersion(v) => write!(f, "unsupported version: {}", v),
@@ -267,5 +268,24 @@ where
     /// Current sample size
     fn sample_size(&self) -> usize {
         self.sample().len()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_bounds() {
+        let bounds = ErrorBounds::new(90.0, 100.0, 110.0, 0.95);
+        
+        assert!(bounds.contains(100.0));
+        assert!(bounds.contains(90.0));
+        assert!(bounds.contains(110.0));
+        assert!(!bounds.contains(89.0));
+        assert!(!bounds.contains(111.0));
+        
+        assert_eq!(bounds.width(), 20.0);
+        assert!((bounds.relative_width() - 0.2).abs() < 0.001);
     }
 }
