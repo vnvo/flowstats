@@ -13,7 +13,6 @@ keywords = [
     "streaming",
     "algorithms",
     "hyperloglog",
-    "tdigest",
     "sketch",
     "probabilistic",
 ]
