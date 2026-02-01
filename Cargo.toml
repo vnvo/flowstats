@@ -2,6 +2,7 @@
 name = "flowstats"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.75.0"
 authors = ["Vahid Negahdari <vahid.negahdari@gmail.com>"]
 description = "Collection of stream analytics algorithms: cardinality, quantiles, frequency, sampling, and more"
 license = "MIT OR Apache-2.0"

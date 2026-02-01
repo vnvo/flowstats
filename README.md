@@ -182,13 +182,15 @@ println!("Total unique: {}", hll1.estimate());
 
 | Need | Algorithm | Memory | Error |
 |------|-----------|--------|-------|
-| Count unique items | HyperLogLog | 16 KB | ~0.8% |
-| Percentiles (p50, p99) | t-digest | ~10 KB | ~1% at tails |
-| Top-k items | Space-Saving | O(k) | Guaranteed if freq > n/k |
-| Item frequencies | Count-Min Sketch | ~100 KB | Overestimates by ε·n |
-| Set membership | Bloom Filter | ~1 MB/100k items | 1% false positive |
-| Random sample | Reservoir | O(k) | Exact uniform sample |
-| Mean/variance | RunningStats | 40 bytes | Exact |
+| Count unique items | HyperLogLog | 16 KB | ~0.8% typical |
+| Percentiles (p50, p99) | t-digest | Variable | Good tail accuracy* |
+| Top-k items | Space-Saving | O(k) | Items with freq > n/k captured |
+| Item frequencies | Count-Min Sketch | Configurable | Overestimates by ≤ε·n |
+| Set membership | Bloom Filter | ~1.2 MB/100k | 1% false positive (configurable) |
+| Random sample | Reservoir | O(k) | Uniform over stream |
+| Mean/variance | RunningStats | 48 bytes | Exact |
+
+*t-digest accuracy depends on compression parameter and data distribution.
 
 ## Feature Flags
 
@@ -281,6 +283,12 @@ For concurrent access to a single sketch, wrap in `Arc<Mutex<_>>`.
 - **NaN values**: Silently ignored in t-digest and RunningStats
 - **Merge errors**: Return `MergeError` for incompatible configurations
 - **Serde validation**: Deserialize validates invariants
+
+## Implementation Notes
+
+- **Hashing**: Uses [xxHash](https://github.com/DoumanAsh/xxhash-rust) (xxh3) for speed. Deterministic within a process but not across versions.
+- **MSRV**: Minimum supported Rust version is 1.75.0
+- **Stability**: Pre-1.0 - API may change between minor versions
 
 ## Roadmap
 - Cuckoo Filter (better than Bloom for deletions)
