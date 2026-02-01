@@ -77,7 +77,7 @@
 #[cfg(not(feature = "std"))]
 extern crate alloc;
 
-// Core traits always available
+mod math;
 pub mod traits;
 
 #[cfg(feature = "cardinality")]

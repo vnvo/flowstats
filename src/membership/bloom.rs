@@ -4,7 +4,8 @@
 //! whether an element is a member of a set. False positives are possible, but
 //! false negatives are not.
 
-use crate::traits::{MembershipSketch, MergeError, Sketch};
+use crate::math;
+use crate::traits::{DecodeError, MembershipSketch, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64_with_seed;
 
 #[cfg(feature = "std")]
@@ -73,12 +74,14 @@ impl BloomFilter {
         // Optimal number of bits: m = -n * ln(p) / (ln(2)^2)
         let ln2_squared = core::f64::consts::LN_2 * core::f64::consts::LN_2;
         let num_bits =
-            (-(expected_items as f64) * false_positive_rate.ln() / ln2_squared).ceil() as usize;
+            math::ceil(-(expected_items as f64) * math::ln(false_positive_rate) / ln2_squared)
+                as usize;
         let num_bits = num_bits.max(64); // Minimum 64 bits
 
         // Optimal number of hash functions: k = (m/n) * ln(2)
         let num_hashes =
-            ((num_bits as f64 / expected_items as f64) * core::f64::consts::LN_2).ceil() as usize;
+            math::ceil((num_bits as f64 / expected_items as f64) * core::f64::consts::LN_2)
+                as usize;
         let num_hashes = num_hashes.max(1).min(32); // Clamp to [1, 32]
 
         Self::with_params(num_bits, num_hashes)
@@ -162,7 +165,7 @@ impl BloomFilter {
     /// This is based on the actual fill ratio of the filter.
     pub fn estimated_false_positive_rate(&self) -> f64 {
         let fill_ratio = self.bits_set() as f64 / self.num_bits as f64;
-        fill_ratio.powi(self.num_hashes as i32)
+        math::powi(fill_ratio, self.num_hashes as i32)
     }
 
     /// Estimate the number of items in the filter
@@ -178,7 +181,7 @@ impl BloomFilter {
         }
 
         // n ≈ -m/k * ln(1 - X/m) where X is bits set
-        -(m / k) * (1.0 - bits_set / m).ln()
+        -(m / k) * math::ln(1.0 - bits_set / m)
     }
 }
 

@@ -3,6 +3,7 @@
 //! The Count-Min Sketch is a probabilistic data structure for estimating
 //! the frequency of elements in a data stream.
 
+use crate::math;
 use crate::traits::{FrequencySketch, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64_with_seed;
 
@@ -72,8 +73,8 @@ impl CountMinSketch {
 
         // width = ceil(e / epsilon)
         // depth = ceil(ln(1/delta))
-        let width = (core::f64::consts::E / epsilon).ceil() as usize;
-        let depth = (1.0 / delta).ln().ceil() as usize;
+        let width = math::ceil(core::f64::consts::E / epsilon) as usize;
+        let depth = math::ceil(math::ln(1.0 / delta)) as usize;
 
         Self::with_dimensions(width, depth)
     }
@@ -133,16 +134,16 @@ impl CountMinSketch {
     /// Add count using conservative update
     ///
     /// Conservative update improves accuracy by only incrementing counters
-    /// that are at the minimum value. This reduces over-counting.
+    /// up to the new estimated value. This reduces over-counting.
     pub fn add_conservative(&mut self, item: &[u8], count: u64) {
         self.num_updates += 1;
         self.total_count += count;
 
-        // First pass: find minimum
+        // First pass: find current estimate (minimum)
         let min_val = self.estimate(item);
         let new_val = min_val.saturating_add(count);
 
-        // Second pass: only update counters at minimum
+        // Second pass: set all counters to at least new_val
         for (row, &seed) in self.seeds.iter().enumerate() {
             let hash = xxh3_64_with_seed(item, seed);
             let col = (hash as usize) % self.width;

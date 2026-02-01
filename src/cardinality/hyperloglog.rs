@@ -3,6 +3,7 @@
 //! Implementation of the HyperLogLog algorithm with linear counting
 //! correction for small cardinalities.
 
+use crate::math;
 use crate::traits::{CardinalitySketch, ErrorBounds, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64;
 
@@ -136,7 +137,11 @@ impl HyperLogLog {
         let m = self.registers.len() as f64;
 
         // Compute harmonic mean of 2^(-register[i])
-        let sum: f64 = self.registers.iter().map(|&r| 2f64.powi(-(r as i32))).sum();
+        let sum: f64 = self
+            .registers
+            .iter()
+            .map(|&r| math::exp2(-(r as f64)))
+            .sum();
 
         // Apply alpha constant
         let alpha = self.alpha_m();
@@ -162,7 +167,7 @@ impl HyperLogLog {
     /// Linear counting estimate for small cardinalities
     fn linear_counting(&self, zeros: usize) -> f64 {
         let m = self.registers.len() as f64;
-        m * (m / zeros as f64).ln()
+        m * math::ln(m / zeros as f64)
     }
 
     /// Small-range correction using linear counting
@@ -267,7 +272,7 @@ impl CardinalitySketch for HyperLogLog {
 
     fn relative_error(&self) -> f64 {
         let m = self.registers.len() as f64;
-        1.04 / m.sqrt()
+        1.04 / math::sqrt(m)
     }
 }
 

@@ -5,7 +5,7 @@
 //!
 //! # Algorithms
 //!
-//! - [`HyperLogLog`]: The classic HLL algorithm with bias correction
+//! - [`HyperLogLog`]: The classic HLL algorithm with small-range correction
 //!
 //! # Example
 //!
@@ -20,11 +20,11 @@
 //! }
 //!
 //! let estimate = hll.estimate();
-//! println!("estimated distinct count: {}", estimate);
+//! println!("Estimated distinct count: {}", estimate);
 //! ```
 
+use crate::math;
 mod hyperloglog;
-
 pub use hyperloglog::HyperLogLog;
 
 /// Compute the required precision for a target error rate
@@ -35,12 +35,14 @@ pub fn precision_for_error(target_error: f64) -> u8 {
     // sqrt(m) = 1.04 / error
     // m = (1.04 / error)^2
     // p = log2(m)
-    let m = (1.04 / target_error).powi(2);
-    let p = m.log2().ceil() as u8;
+    let m = math::powi(1.04 / target_error, 2);
+    let p = math::ceil(math::log2(m)) as u8;
     p.clamp(4, 18)
 }
 
-/// Compute the memory usage for a given precision
+/// Compute the memory usage in bytes for a given precision
+///
+/// Returns the number of registers, which equals bytes since each register is 1 byte.
 pub fn memory_for_precision(precision: u8) -> usize {
     1usize << precision
 }
@@ -48,7 +50,7 @@ pub fn memory_for_precision(precision: u8) -> usize {
 /// Compute the expected error for a given precision
 pub fn error_for_precision(precision: u8) -> f64 {
     let m = (1usize << precision) as f64;
-    1.04 / m.sqrt()
+    1.04 / math::sqrt(m)
 }
 
 #[cfg(test)]

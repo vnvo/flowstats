@@ -3,6 +3,7 @@
 //! Computes streaming statistics using Welford's numerically stable online algorithm.
 //! Supports merging for distributed computation.
 
+use crate::math;
 use crate::traits::{MergeError, Sketch};
 
 /// Running statistics calculator using Welford's algorithm
@@ -156,12 +157,12 @@ impl RunningStats {
 
     /// Get the population standard deviation
     pub fn stddev(&self) -> f64 {
-        self.variance().sqrt()
+        math::sqrt(self.variance())
     }
 
     /// Get the sample standard deviation
     pub fn sample_stddev(&self) -> f64 {
-        self.sample_variance().sqrt()
+        math::sqrt(self.sample_variance())
     }
 
     /// Get the minimum value

@@ -4,6 +4,7 @@
 //! t-digest provides excellent accuracy at the extremes (p01, p99) while
 //! being fully mergeable for distributed computation.
 
+use crate::math;
 use crate::traits::{MergeError, QuantileSketch, Sketch};
 
 #[cfg(feature = "std")]
@@ -449,8 +450,7 @@ impl QuantileSketch for TDigest {
 /// Approximate arcsin for the scale function
 #[inline]
 fn asin_approx(x: f64) -> f64 {
-    // Use standard library
-    x.asin()
+    math::asin(x)
 }
 
 #[cfg(feature = "serde")]
