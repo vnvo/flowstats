@@ -150,11 +150,8 @@ impl TDigest {
         self.buffer.sort_by(|a, b| a.total_cmp(b));
 
         // Create centroids from buffer values
-        let mut new_centroids: Vec<Centroid> = self
-            .buffer
-            .drain(..)
-            .map(|v| Centroid::new(v, 1))
-            .collect();
+        let mut new_centroids: Vec<Centroid> =
+            self.buffer.drain(..).map(|v| Centroid::new(v, 1)).collect();
 
         // Merge with existing centroids
         if !self.centroids.is_empty() {
@@ -320,7 +317,8 @@ impl TDigest {
                     let curr_weight_half = centroid.weight as f64 / 2.0;
 
                     let fraction = (*value - prev.mean) / (centroid.mean - prev.mean);
-                    return (cumulative - prev_weight_half + fraction * (prev_weight_half + curr_weight_half))
+                    return (cumulative - prev_weight_half
+                        + fraction * (prev_weight_half + curr_weight_half))
                         / self.count as f64;
                 }
             }

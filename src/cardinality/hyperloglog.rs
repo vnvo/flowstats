@@ -1,7 +1,7 @@
 //! HyperLogLog cardinality estimator
 //!
-//! Implementation of the HyperLogLog algorithm with bias correction
-//! for small cardinalities.
+//! Implementation of the HyperLogLog algorithm with linear counting
+//! correction for small cardinalities.
 
 use crate::traits::{CardinalitySketch, ErrorBounds, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64;
@@ -52,8 +52,8 @@ pub struct HyperLogLog {
     precision: u8,
     /// Registers (one byte per register)
     registers: Vec<u8>,
-    /// Number of items inserted
-    count: u64,
+    /// Number of insert operations (not distinct items)
+    num_inserts: u64,
 }
 
 impl HyperLogLog {
@@ -75,7 +75,7 @@ impl HyperLogLog {
         Self {
             precision,
             registers: vec![0u8; m],
-            count: 0,
+            num_inserts: 0,
         }
     }
 
@@ -110,14 +110,20 @@ impl HyperLogLog {
 
     /// Insert a pre-computed hash value
     pub fn insert_hash(&mut self, hash: u64) {
-        self.count += 1;
+        self.num_inserts += 1;
 
-        // Use first p bits for register index
-        let idx = (hash >> (64 - self.precision)) as usize;
+        let p = self.precision as u32;
 
-        // Count leading zeros in remaining bits + 1
-        let w = hash << self.precision | (1u64 << (self.precision - 1));
-        let rho = w.leading_zeros() as u8 + 1;
+        // Use top p bits for register index
+        let idx = (hash >> (64 - p)) as usize;
+
+        // Remaining bits moved to MSB positions
+        let w = hash << p;
+
+        // rho = leading zeros + 1, clamped to valid range [1, 64-p+1]
+        // This handles the edge case where remaining bits are all zeros
+        let max_rho = (64 - p + 1) as u8;
+        let rho = ((w.leading_zeros() + 1) as u8).min(max_rho);
 
         // Update register if new value is larger
         if rho > self.registers[idx] {
@@ -159,10 +165,15 @@ impl HyperLogLog {
         m * (m / zeros as f64).ln()
     }
 
-    /// Bias correction for HyperLogLog++
+    /// Small-range correction using linear counting
+    ///
+    /// For small cardinalities (raw estimate <= 2.5m), uses linear counting
+    /// which is more accurate. This is a standard HyperLogLog correction,
+    /// not the full HLL++ empirical bias tables.
+    ///
+    /// Note: Large-range correction (for cardinalities near 2^32) is not
+    /// implemented as it's rarely needed for typical use cases.
     fn bias_correction(&self, raw: f64) -> f64 {
-        // Simplified bias correction
-        // Full HLL++ uses empirical bias tables
         let m = self.registers.len() as f64;
 
         // Threshold for switching to linear counting
@@ -179,8 +190,7 @@ impl HyperLogLog {
             }
         }
 
-        // Large range: no correction needed
-        // (In full HLL++, we'd also handle extremely large cardinalities here)
+        // No correction for normal/large ranges
         raw
     }
 }
@@ -205,13 +215,13 @@ impl Sketch for HyperLogLog {
             *a = (*a).max(b);
         }
 
-        self.count += other.count;
+        self.num_inserts += other.num_inserts;
         Ok(())
     }
 
     fn clear(&mut self) {
         self.registers.fill(0);
-        self.count = 0;
+        self.num_inserts = 0;
     }
 
     fn size_bytes(&self) -> usize {
@@ -219,13 +229,13 @@ impl Sketch for HyperLogLog {
     }
 
     fn count(&self) -> u64 {
-        self.count
+        self.num_inserts
     }
 }
 
 impl CardinalitySketch for HyperLogLog {
     fn estimate(&self) -> f64 {
-        if self.count == 0 {
+        if self.num_inserts == 0 {
             return 0.0;
         }
 
@@ -271,7 +281,7 @@ impl serde::Serialize for HyperLogLog {
         let mut state = serializer.serialize_struct("HyperLogLog", 3)?;
         state.serialize_field("precision", &self.precision)?;
         state.serialize_field("registers", &self.registers)?;
-        state.serialize_field("count", &self.count)?;
+        state.serialize_field("num_inserts", &self.num_inserts)?;
         state.end()
     }
 }
@@ -286,14 +296,32 @@ impl<'de> serde::Deserialize<'de> for HyperLogLog {
         struct HllData {
             precision: u8,
             registers: Vec<u8>,
-            count: u64,
+            num_inserts: u64,
         }
 
         let data = HllData::deserialize(deserializer)?;
+
+        // Validate precision is in valid range
+        if !(4..=18).contains(&data.precision) {
+            return Err(serde::de::Error::custom(
+                "precision must be between 4 and 18",
+            ));
+        }
+
+        // Validate registers length matches precision
+        let expected_len = 1usize << data.precision;
+        if data.registers.len() != expected_len {
+            return Err(serde::de::Error::custom(format!(
+                "invalid register length: expected {}, got {}",
+                expected_len,
+                data.registers.len()
+            )));
+        }
+
         Ok(HyperLogLog {
             precision: data.precision,
             registers: data.registers,
-            count: data.count,
+            num_inserts: data.num_inserts,
         })
     }
 }
@@ -426,5 +454,57 @@ mod tests {
     fn test_with_error() {
         let hll = HyperLogLog::with_error(0.01); // Target 1% error
         assert!(hll.precision() >= 13); // Should select appropriate precision
+    }
+
+    #[test]
+    fn test_rho_edge_case_all_zeros() {
+        // Test that rho doesn't overflow when remaining bits are all zeros
+        let mut hll = HyperLogLog::new(14);
+
+        // Hash where remaining bits after index extraction are all zeros
+        // For precision 14, index uses top 14 bits, leaving 50 bits
+        // If those 50 bits are all zero, rho should be clamped to 51 (64-14+1)
+        let hash_with_zero_suffix =
+            0b1111111111111100_0000000000000000_0000000000000000_0000000000000000u64;
+        hll.insert_hash(hash_with_zero_suffix);
+
+        // Max valid rho for precision 14 is 64-14+1 = 51
+        let max_rho = 64 - 14 + 1;
+
+        // The register value should be at most max_rho
+        let idx = (hash_with_zero_suffix >> (64 - 14)) as usize;
+        assert!(
+            hll.registers[idx] <= max_rho as u8,
+            "rho {} exceeds max valid rho {}",
+            hll.registers[idx],
+            max_rho
+        );
+
+        // Estimate should still be reasonable (not skewed by invalid rho)
+        let estimate = hll.estimate();
+        assert!(estimate >= 0.5 && estimate <= 5.0, "estimate={}", estimate);
+    }
+
+    #[test]
+    fn test_rho_various_precisions() {
+        // Test rho clamping works for different precisions
+        for precision in [4u8, 10, 14, 18] {
+            let mut hll = HyperLogLog::new(precision);
+
+            // Insert hash with all zeros in remaining bits
+            let hash = ((1u64 << precision) - 1) << (64 - precision); // Only index bits set
+            hll.insert_hash(hash);
+
+            let max_rho = (64 - precision + 1) as u8;
+            let idx = (hash >> (64 - precision)) as usize;
+
+            assert!(
+                hll.registers[idx] <= max_rho,
+                "precision={}: rho {} exceeds max {}",
+                precision,
+                hll.registers[idx],
+                max_rho
+            );
+        }
     }
 }
