@@ -188,9 +188,6 @@ pub trait QuantileSketch: Sketch {
     /// Add a value to the sketch
     fn add(&mut self, value: Self::Value);
 
-    /// Add a value with weight
-    fn add_weighted(&mut self, value: Self::Value, weight: u64);
-
     /// Get quantile value at given rank (0.0 to 1.0)
     ///
     /// rank=0.5 returns the median

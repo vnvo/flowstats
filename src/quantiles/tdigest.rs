@@ -111,11 +111,6 @@ impl TDigest {
         }
     }
 
-    /// Create a t-digest with default compression (100)
-    pub fn default() -> Self {
-        Self::new(100.0)
-    }
-
     /// Get the compression parameter
     pub fn compression(&self) -> f64 {
         self.compression
@@ -127,7 +122,14 @@ impl TDigest {
     }
 
     /// Add a single value
+    ///
+    /// NaN values are ignored to prevent corrupting the digest.
     pub fn push(&mut self, value: f64) {
+        // Reject NaN to prevent poisoning the digest
+        if value.is_nan() {
+            return;
+        }
+
         self.buffer.push(value);
         self.count += 1;
         self.min = self.min.min(value);
@@ -144,17 +146,20 @@ impl TDigest {
             return;
         }
 
-        // Sort buffer
-        self.buffer.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        // Sort buffer using total_cmp for defined ordering (handles edge cases)
+        self.buffer.sort_by(|a, b| a.total_cmp(b));
 
         // Create centroids from buffer values
-        let mut new_centroids: Vec<Centroid> =
-            self.buffer.drain(..).map(|v| Centroid::new(v, 1)).collect();
+        let mut new_centroids: Vec<Centroid> = self
+            .buffer
+            .drain(..)
+            .map(|v| Centroid::new(v, 1))
+            .collect();
 
         // Merge with existing centroids
         if !self.centroids.is_empty() {
             new_centroids.extend(self.centroids.drain(..));
-            new_centroids.sort_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap());
+            new_centroids.sort_by(|a, b| a.mean.total_cmp(&b.mean));
         }
 
         // Compress centroids using the scale function
@@ -315,8 +320,7 @@ impl TDigest {
                     let curr_weight_half = centroid.weight as f64 / 2.0;
 
                     let fraction = (*value - prev.mean) / (centroid.mean - prev.mean);
-                    return (cumulative - prev_weight_half
-                        + fraction * (prev_weight_half + curr_weight_half))
+                    return (cumulative - prev_weight_half + fraction * (prev_weight_half + curr_weight_half))
                         / self.count as f64;
                 }
             }
@@ -329,6 +333,12 @@ impl TDigest {
     }
 }
 
+impl Default for TDigest {
+    fn default() -> Self {
+        Self::new(100.0)
+    }
+}
+
 impl Sketch for TDigest {
     type Item = f64;
 
@@ -337,14 +347,18 @@ impl Sketch for TDigest {
     }
 
     fn merge(&mut self, other: &Self) -> Result<(), MergeError> {
-        // Ensure both are compressed
-        // Note: In a real implementation, we'd handle this more carefully
-        // to avoid mutating during merge
+        // Check compatibility
+        if (self.compression - other.compression).abs() > f64::EPSILON {
+            return Err(MergeError::IncompatibleConfig {
+                expected: format!("compression={}", self.compression),
+                found: format!("compression={}", other.compression),
+            });
+        }
 
         // Merge centroids
         let mut all_centroids = self.centroids.clone();
         all_centroids.extend(other.centroids.iter().cloned());
-        all_centroids.sort_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap());
+        all_centroids.sort_by(|a, b| a.mean.total_cmp(&b.mean));
 
         // Add buffered values as centroids
         for &v in &self.buffer {
@@ -355,7 +369,7 @@ impl Sketch for TDigest {
         }
 
         if !all_centroids.is_empty() {
-            all_centroids.sort_by(|a, b| a.mean.partial_cmp(&b.mean).unwrap());
+            all_centroids.sort_by(|a, b| a.mean.total_cmp(&b.mean));
         }
 
         // Update stats
@@ -394,12 +408,6 @@ impl QuantileSketch for TDigest {
 
     fn add(&mut self, value: f64) {
         self.push(value);
-    }
-
-    fn add_weighted(&mut self, value: f64, weight: u64) {
-        for _ in 0..weight {
-            self.push(value);
-        }
     }
 
     fn quantile(&self, rank: f64) -> Option<f64> {
@@ -614,5 +622,55 @@ mod tests {
         let d2 = TDigest::new(500.0);
 
         assert!(d2.buffer_capacity > d1.buffer_capacity);
+    }
+
+    #[test]
+    fn test_nan_ignored() {
+        let mut digest = TDigest::new(100.0);
+
+        digest.add(1.0);
+        digest.add(f64::NAN);
+        digest.add(2.0);
+        digest.add(f64::NAN);
+        digest.add(3.0);
+
+        // NaNs should be ignored
+        assert_eq!(digest.count(), 3);
+        assert_eq!(digest.min(), Some(1.0));
+        assert_eq!(digest.max(), Some(3.0));
+
+        // Quantiles should work correctly
+        let median = digest.median().unwrap();
+        assert!(!median.is_nan());
+    }
+
+    #[test]
+    fn test_merge_incompatible_compression() {
+        let mut d1 = TDigest::new(100.0);
+        let d2 = TDigest::new(200.0);
+
+        d1.add(1.0);
+
+        let result = d1.merge(&d2);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_default() {
+        let digest = TDigest::default();
+        assert!((digest.compression() - 100.0).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_infinity() {
+        let mut digest = TDigest::new(100.0);
+
+        digest.add(1.0);
+        digest.add(f64::INFINITY);
+        digest.add(2.0);
+
+        // Infinity is a valid f64 value
+        assert_eq!(digest.count(), 3);
+        assert_eq!(digest.max(), Some(f64::INFINITY));
     }
 }
