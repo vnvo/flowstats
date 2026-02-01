@@ -76,6 +76,7 @@ pub fn ceil(x: f64) -> f64 {
 
 #[cfg(feature = "std")]
 #[inline]
+#[allow(dead_code)]
 pub fn floor(x: f64) -> f64 {
     x.floor()
 }

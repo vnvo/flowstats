@@ -5,7 +5,7 @@
 //! false negatives are not.
 
 use crate::math;
-use crate::traits::{DecodeError, MembershipSketch, MergeError, Sketch};
+use crate::traits::{MembershipSketch, MergeError, Sketch};
 use xxhash_rust::xxh3::xxh3_64_with_seed;
 
 #[cfg(feature = "std")]
