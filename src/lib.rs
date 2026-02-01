@@ -100,6 +100,10 @@ pub mod membership;
 #[cfg_attr(docsrs, doc(cfg(feature = "sampling")))]
 pub mod sampling;
 
+#[cfg(feature = "statistics")]
+#[cfg_attr(docsrs, doc(cfg(feature = "statistics")))]
+pub mod statistics;
+
 pub mod prelude {
     pub use crate::traits::*;
 
@@ -114,6 +118,10 @@ pub mod prelude {
 
     #[cfg(feature = "membership")]
     pub use crate::membership::BloomFilter;
+
+    #[cfg(feature = "statistics")]
+    pub use crate::statistics::RunningStats;
+
 }
 
 #[cfg(feature = "cardinality")]
@@ -127,3 +135,6 @@ pub use frequency::CountMinSketch;
 
 #[cfg(feature = "membership")]
 pub use membership::BloomFilter;
+
+#[cfg(feature = "statistics")]
+pub use statistics::RunningStats;

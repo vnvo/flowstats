@@ -19,16 +19,17 @@ keywords = [
 categories = ["algorithms", "data-structures", "science"]
 
 [features]
-default = ["std", "cardinality", "quantiles", "frequency", "membership"]
+default = ["std", "cardinality", "quantiles", "frequency", "statistics"]
 
 # All algorithms
-full = ["cardinality", "quantiles", "frequency", "membership", "sampling"]
+full = ["cardinality", "quantiles", "frequency", "membership", "sampling", "statistics"]
 
 cardinality = []
 quantiles = []
 frequency = []
 membership = []
 sampling = []
+statistics = []
 
 # Platform features
 std = []
