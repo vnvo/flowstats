@@ -8,18 +8,27 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/vnvo/flowstats"
 documentation = "https://docs.rs/flowstats"
 readme = "README.md"
-keywords = ["streaming", "algorithms", "hyperloglog", "tdigest", "sketch", "analytics"]
+keywords = [
+    "streaming",
+    "algorithms",
+    "hyperloglog",
+    "tdigest",
+    "sketch",
+    "analytics",
+]
 categories = ["algorithms", "data-structures", "science"]
 
 [features]
-default = ["std", "cardinality", "quantiles", "frequency"]
+default = ["std", "cardinality", "quantiles", "frequency", "membership"]
 
 # All algorithms
-full = ["cardinality", "quantiles", "frequency"]
+full = ["cardinality", "quantiles", "frequency", "membership", "sampling"]
 
-cardinality = []   # HyperLogLog, HLL++, CPC, linear counting
-quantiles = []     # t-digest, KLL, DDSketch
-frequency = []     # Count-Min Sketch
+cardinality = []
+quantiles = []
+frequency = []
+membership = []
+sampling = []
 
 # Platform features
 std = []

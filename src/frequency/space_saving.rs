@@ -7,10 +7,7 @@ use crate::traits::{FrequencySketch, HeavyHitters, MergeError, Sketch};
 use core::hash::Hash;
 
 #[cfg(feature = "std")]
-use std::{
-    collections::HashMap,
-    vec::Vec,
-};
+use std::{collections::HashMap, vec::Vec};
 
 #[cfg(not(feature = "std"))]
 extern crate alloc;

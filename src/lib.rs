@@ -61,7 +61,7 @@
 //! - `cardinality` (default): HyperLogLog for distinct counting
 //! - `frequency` (default): Count-Min Sketch, Space-Saving (tbd)
 //! - `quantiles` (default): t-digest for percentiles
-//! - `membership`: Bloom and Cuckoo filters (tbd)
+//! - `membership`: (default) Bloom filter
 //! - `sampling`: Reservoir and weighted sampling (tbd)
 //! - `sets`: Theta sketch for set operations (tbd)
 //! - `statistics`: Running moments, entropy (tbd)
@@ -92,6 +92,14 @@ pub mod quantiles;
 #[cfg_attr(docsrs, doc(cfg(feature = "frequency")))]
 pub mod frequency;
 
+#[cfg(feature = "membership")]
+#[cfg_attr(docsrs, doc(cfg(feature = "membership")))]
+pub mod membership;
+
+#[cfg(feature = "sampling")]
+#[cfg_attr(docsrs, doc(cfg(feature = "sampling")))]
+pub mod sampling;
+
 pub mod prelude {
     pub use crate::traits::*;
 
@@ -102,7 +110,10 @@ pub mod prelude {
     pub use crate::quantiles::TDigest;
 
     #[cfg(feature = "frequency")]
-    pub use crate::frequency::CountMinSketch;    
+    pub use crate::frequency::CountMinSketch;
+
+    #[cfg(feature = "membership")]
+    pub use crate::membership::BloomFilter;
 }
 
 #[cfg(feature = "cardinality")]
@@ -113,3 +124,6 @@ pub use quantiles::TDigest;
 
 #[cfg(feature = "frequency")]
 pub use frequency::CountMinSketch;
+
+#[cfg(feature = "membership")]
+pub use membership::BloomFilter;
