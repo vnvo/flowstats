@@ -116,12 +116,17 @@ pub mod prelude {
     #[cfg(feature = "frequency")]
     pub use crate::frequency::CountMinSketch;
 
+    #[cfg(all(feature = "frequency", feature = "std"))]
+    pub use crate::frequency::SpaceSaving;
+
     #[cfg(feature = "membership")]
     pub use crate::membership::BloomFilter;
 
+    #[cfg(feature = "sampling")]
+    pub use crate::sampling::ReservoirSampler;
+
     #[cfg(feature = "statistics")]
     pub use crate::statistics::RunningStats;
-
 }
 
 #[cfg(feature = "cardinality")]
@@ -133,8 +138,14 @@ pub use quantiles::TDigest;
 #[cfg(feature = "frequency")]
 pub use frequency::CountMinSketch;
 
+#[cfg(all(feature = "frequency", feature = "std"))]
+pub use frequency::SpaceSaving;
+
 #[cfg(feature = "membership")]
 pub use membership::BloomFilter;
+
+#[cfg(feature = "sampling")]
+pub use sampling::ReservoirSampler;
 
 #[cfg(feature = "statistics")]
 pub use statistics::RunningStats;
