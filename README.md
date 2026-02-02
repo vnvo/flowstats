@@ -16,7 +16,7 @@ Streaming algorithms for Rust.
 - **Resource-constrained environments** - Process unbounded streams with fixed memory
 
 Additionally: 
-- All structures are **mergeable** for distributed computation
+- Most structures are **mergeable** for distributed computation (except Space-Saving)
 - It supports `no_std` environments, see no_std support section below.
 
 ## Features
