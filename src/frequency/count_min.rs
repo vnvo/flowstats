@@ -181,8 +181,9 @@ impl CountMinSketch {
             let product: u64 = self.table[row]
                 .iter()
                 .zip(other.table[row].iter())
-                .map(|(&a, &b)| a.saturating_mul(b))
-                .sum();
+                .fold(0u64, |acc, (&a, &b)| {
+                    acc.saturating_add(a.saturating_mul(b))
+                });
             min_product = min_product.min(product);
         }
 
