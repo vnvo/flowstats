@@ -38,7 +38,17 @@ impl Xorshift64 {
 
     /// Generate random usize in [0, bound)
     fn next_bounded(&mut self, bound: usize) -> usize {
-        (self.next() as usize) % bound
+        // Use rejection sampling to eliminate modulo bias
+        // For typical reservoir sizes, bias is negligible, but this is correct
+        let bound = bound as u64;
+        // threshold = 2^64 % bound (using wrapping_neg trick)
+        let threshold = bound.wrapping_neg() % bound;
+        loop {
+            let r = self.next();
+            if r >= threshold {
+                return (r % bound) as usize;
+            }
+        }
     }
 }
 
