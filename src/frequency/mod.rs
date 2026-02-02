@@ -24,7 +24,10 @@
 //! ```
 
 mod count_min;
+#[cfg(feature = "std")]
 mod space_saving;
 
 pub use count_min::CountMinSketch;
+
+#[cfg(feature = "std")]
 pub use space_saving::SpaceSaving;

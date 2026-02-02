@@ -2,20 +2,15 @@
 //!
 //! The Space-Saving algorithm efficiently tracks the k most frequent items
 //! in a data stream using only O(k) space.
+//!
+//! **Note**: This module requires the `std` feature. The Space-Saving algorithm
+//! does not support correct distributed merging due to its replacement strategy.
+//! Attempting to merge will return an error.
 
 use crate::traits::{FrequencySketch, HeavyHitters, MergeError, Sketch};
 use core::hash::Hash;
-
-#[cfg(feature = "std")]
-use std::{collections::HashMap, vec::Vec};
-
-#[cfg(not(feature = "std"))]
-extern crate alloc;
-#[cfg(not(feature = "std"))]
-use alloc::{
-    collections::{BTreeMap as HashMap, BinaryHeap},
-    vec::Vec,
-};
+use std::collections::HashMap;
+use std::vec::Vec;
 
 /// Entry in the Space-Saving structure
 #[derive(Clone, Debug)]
@@ -196,12 +191,15 @@ impl<T: Hash + Eq + Clone + core::fmt::Debug> Sketch for SpaceSaving<T> {
         self.add(item.clone());
     }
 
-    fn merge(&mut self, other: &Self) -> Result<(), MergeError> {
-        // Merge by adding all counters from other
-        for counter in &other.counters {
-            self.add_count(counter.item.clone(), counter.count);
-        }
-        Ok(())
+    fn merge(&mut self, _other: &Self) -> Result<(), MergeError> {
+        // Space-Saving does not support correct distributed merge.
+        // The algorithm's replacement strategy makes merging two summaries
+        // produce incorrect results (inflated counts, dropped heavy hitters).
+        // Use a single SpaceSaving instance or aggregate raw data instead.
+        Err(MergeError::IncompatibleConfig {
+            expected: "Space-Saving does not support merge".into(),
+            found: "merge attempted".into(),
+        })
     }
 
     fn clear(&mut self) {
@@ -366,22 +364,12 @@ mod tests {
     }
 
     #[test]
-    fn test_merge() {
+    fn test_merge_not_supported() {
         let mut ss1 = SpaceSaving::<&str>::new(10);
-        let mut ss2 = SpaceSaving::<&str>::new(10);
+        let ss2 = SpaceSaving::<&str>::new(10);
 
-        for _ in 0..50 {
-            ss1.add("apple");
-        }
-        for _ in 0..30 {
-            ss2.add("banana");
-        }
-
-        ss1.merge(&ss2).unwrap();
-
-        assert!(ss1.estimate(&"apple") >= 50);
-        assert!(ss1.estimate(&"banana") >= 30);
-        assert_eq!(ss1.total_count(), 80);
+        // Space-Saving does not support merge
+        assert!(ss1.merge(&ss2).is_err());
     }
 
     #[test]
