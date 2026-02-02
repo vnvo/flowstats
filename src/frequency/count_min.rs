@@ -234,7 +234,7 @@ impl Sketch for CountMinSketch {
     fn size_bytes(&self) -> usize {
         core::mem::size_of::<Self>()
             + self.depth * self.width * core::mem::size_of::<u64>()
-            + self.seeds.len() * core::mem::size_of::<u32>()
+            + self.seeds.len() * core::mem::size_of::<u64>()
     }
 
     fn count(&self) -> u64 {
