@@ -5,6 +5,14 @@
 
 use core::fmt::Debug;
 
+#[cfg(feature = "std")]
+use std::{string::String, vec::Vec};
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 /// Error during sketch merge operation
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MergeError {
