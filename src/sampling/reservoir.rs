@@ -175,7 +175,7 @@ impl<T: Clone + core::fmt::Debug> ReservoirSampler<T> {
         if self.count == 0 {
             0.0
         } else {
-            (self.capacity as f64) / (self.count as f64)
+            ((self.capacity as f64) / (self.count as f64)).min(1.0)
         }
     }
 }
