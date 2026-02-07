@@ -119,7 +119,7 @@ use flowstats::CountMinSketch;
 let mut cms = CountMinSketch::new(0.001, 0.01); // ε=0.1%, δ=1%
 
 for event in events {
-    cms.add(event.as_bytes());
+    cms.add(event.as_bytes(), 1);
 }
 
 let freq = cms.estimate(b"login");
@@ -196,8 +196,8 @@ println!("Total unique: {}", hll1.estimate());
 
 ```toml
 [features]
-default = ["std", "cardinality", "frequency", "quantiles"]
-full = ["cardinality", "frequency", "quantiles", "membership", "sampling", "statistics"]
+default = ["std", "cardinality", "quantiles", "frequency", "membership", "sampling", "statistics"]
+full = ["cardinality", "quantiles", "frequency", "membership", "sampling", "statistics"]
 
 # Algorithm families
 cardinality = []   # HyperLogLog
@@ -277,6 +277,9 @@ for handle in handles {
 ```
 
 For concurrent access to a single sketch, wrap in `Arc<Mutex<_>>`.
+
+> **Note**: `TDigest` uses interior mutability (`RefCell`) for lazy compression on queries,
+> making it `Send` but **not `Sync`**. Use `Arc<Mutex<TDigest>>` for shared access across threads.
 
 ## Error Handling
 
