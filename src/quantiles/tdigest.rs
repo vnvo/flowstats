@@ -207,6 +207,15 @@ impl TDigest {
     }
 
     /// Get quantile at rank (0.0 to 1.0)
+    ///
+    /// Uses centroid midpoint-based interpolation that is the proper inverse
+    /// of `rank_impl`. Each centroid's "position" in rank space is its midpoint:
+    /// `(cumulative_weight_before + weight/2) / total_count`.
+    ///
+    /// Interpolation regions:
+    /// - [0, midpoint_0]: min → centroid[0].mean
+    /// - [midpoint_i, midpoint_{i+1}]: centroid[i].mean → centroid[i+1].mean
+    /// - [midpoint_last, total]: centroid[last].mean → max
     fn quantile_impl(&self, q: f64) -> Option<f64> {
         if self.count == 0 {
             return None;
@@ -229,7 +238,6 @@ impl TDigest {
         }
 
         let q = q.clamp(0.0, 1.0);
-        let target_rank = q * self.count as f64;
 
         // Handle extremes
         if q <= 0.0 {
@@ -239,46 +247,53 @@ impl TDigest {
             return Some(self.max);
         }
 
-        // Binary search through centroids
-        let mut cumulative = 0.0;
+        let total = self.count as f64;
+        let target = q * total;
 
-        for (i, centroid) in centroids.iter().enumerate() {
-            let next_cumulative = cumulative + centroid.weight as f64;
+        // Compute midpoint of first centroid
+        let first_mid = centroids[0].weight as f64 / 2.0;
 
-            if target_rank <= next_cumulative {
-                // Interpolate within this centroid
-                if i == 0 {
-                    // First centroid: interpolate from min
-                    let prev_mean = self.min;
-                    let delta = centroid.mean - prev_mean;
-                    let fraction = (target_rank - cumulative) / centroid.weight as f64;
-                    return Some(prev_mean + delta * fraction);
-                } else {
-                    // Interpolate between this and previous centroid
-                    let prev = &centroids[i - 1];
-                    let prev_mid = cumulative - prev.weight as f64 / 2.0;
-                    let curr_mid = cumulative + centroid.weight as f64 / 2.0;
+        // Region 1: target is before first centroid's midpoint
+        // Maps rank [0, first_mid] → value [min, c0.mean]
+        if target <= first_mid {
+            if first_mid > 0.0 {
+                let t = target / first_mid;
+                return Some(self.min + (centroids[0].mean - self.min) * t);
+            }
+            return Some(centroids[0].mean);
+        }
 
-                    if target_rank <= cumulative {
-                        // In the overlap with previous centroid
-                        let t = (target_rank - prev_mid) / (cumulative - prev_mid);
-                        return Some(prev.mean + (centroid.mean - prev.mean) * t);
-                    } else {
-                        // In this centroid
-                        let t = (target_rank - cumulative) / (curr_mid - cumulative);
-                        return Some(
-                            centroid.mean
-                                + if i + 1 < centroids.len() {
-                                    (centroids[i + 1].mean - centroid.mean) * t
-                                } else {
-                                    (self.max - centroid.mean) * t
-                                },
-                        );
-                    }
+        // Region 2: between adjacent centroid midpoints
+        let mut cumulative = centroids[0].weight as f64;
+        let mut prev_mid = first_mid;
+
+        for i in 1..centroids.len() {
+            let curr_mid = cumulative + centroids[i].weight as f64 / 2.0;
+
+            if target <= curr_mid {
+                // Interpolate between centroid[i-1] and centroid[i]
+                let span = curr_mid - prev_mid;
+                if span > 0.0 {
+                    let t = (target - prev_mid) / span;
+                    return Some(
+                        centroids[i - 1].mean
+                            + (centroids[i].mean - centroids[i - 1].mean) * t,
+                    );
                 }
+                return Some(centroids[i].mean);
             }
 
-            cumulative = next_cumulative;
+            prev_mid = curr_mid;
+            cumulative += centroids[i].weight as f64;
+        }
+
+        // Region 3: after last centroid's midpoint
+        // Maps rank [last_mid, total] → value [last.mean, max]
+        let remaining = total - prev_mid;
+        if remaining > 0.0 {
+            let t = (target - prev_mid) / remaining;
+            let last_mean = centroids.last().unwrap().mean;
+            return Some(last_mean + (self.max - last_mean) * t);
         }
 
         Some(self.max)
