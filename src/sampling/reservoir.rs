@@ -205,17 +205,59 @@ impl<T: Clone + core::fmt::Debug> Sketch for ReservoirSampler<T> {
             });
         }
 
-        // Merge by sampling from combined pool
-        // This is a simplified merge - for exact merging, you'd need
-        // weighted sampling based on items_seen
-        for item in &other.reservoir {
-            self.count += 1;
-            let j = self.rng.next_bounded(self.count as usize);
-            if j < self.capacity && j < self.reservoir.len() {
-                self.reservoir[j] = item.clone();
-            }
+        if other.count == 0 {
+            return Ok(());
         }
 
+        if self.count == 0 {
+            self.reservoir = other.reservoir.clone();
+            self.count = other.count;
+            return Ok(());
+        }
+
+        let total_count = self.count + other.count;
+
+        // Build merged reservoir using weighted selection.
+        //
+        // Each item in self.reservoir represents self.count / self.len() items
+        // from the original stream (and analogously for other). We need to produce
+        // a uniform sample of the combined stream of total_count items.
+        //
+        // Strategy: if both reservoirs are full (common case), select each slot
+        // from self with probability self.count/total_count, else from other.
+        // If not both full, the combined items may fit in the reservoir directly.
+
+        let self_len = self.reservoir.len();
+        let other_len = other.reservoir.len();
+
+        if self_len + other_len <= self.capacity {
+            // Both underfilled: all items fit in the reservoir
+            self.reservoir.extend(other.reservoir.iter().cloned());
+        } else {
+            // At least one side is full, or combined exceeds capacity.
+            // Use weighted selection: for each slot in the output reservoir,
+            // pick from self with probability self.count / total_count.
+            let output_len = self.capacity.min(self_len + other_len);
+            let mut new_reservoir = Vec::with_capacity(output_len);
+
+            for _ in 0..output_len {
+                // Random number in [0, total_count)
+                let r = self.rng.next_bounded(total_count as usize) as u64;
+                if r < self.count {
+                    // Pick random item from self's reservoir
+                    let idx = self.rng.next_bounded(self_len);
+                    new_reservoir.push(self.reservoir[idx].clone());
+                } else {
+                    // Pick random item from other's reservoir
+                    let idx = self.rng.next_bounded(other_len);
+                    new_reservoir.push(other.reservoir[idx].clone());
+                }
+            }
+
+            self.reservoir = new_reservoir;
+        }
+
+        self.count = total_count;
         Ok(())
     }
 
