@@ -25,7 +25,7 @@ use flowstats::membership::BloomFilter;
 use flowstats::quantiles::TDigest;
 use flowstats::sampling::ReservoirSampler;
 use flowstats::statistics::RunningStats;
-use flowstats::traits::{CardinalitySketch, FrequencySketch, QuantileSketch, Sketch};
+use flowstats::traits::{CardinalitySketch, QuantileSketch, Sketch};
 
 // ============================================================================
 // Reservoir Sampler
